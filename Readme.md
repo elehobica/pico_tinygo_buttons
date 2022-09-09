@@ -1,10 +1,11 @@
 # Raspberry Pi Pico TinyGo Timer Alarm
 ## Overview
-This project is an implementation of Timer/Alarm on Raspberry Pi Pico by TinyGo.
+This project is a simple implementation of Timer/Alarm on Raspberry Pi Pico by TinyGo.
 * confirmed with TinyGo 0.22.0
 
 This project features:
-* T.B.D.
+* Repeated Timer Alarm
+* Oneshot Timer Alarm
 
 ## Supported Board
 * Raspberry Pi Pico
