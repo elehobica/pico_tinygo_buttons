@@ -4,6 +4,7 @@ import (
     "fmt"
     "machine"
     "time"
+    "os"
 
     "github.com/elehobica/pico_tinygo_timer_alarm/mymachine"
 )
@@ -40,12 +41,19 @@ func main() {
     for loop := 0; true; loop++ {
         time.Sleep(1000 * time.Millisecond)
         fmt.Printf("loop\r\n");
-        if (loop == 20) {
+        if (loop == 10) {
             mymachine.SetRepeatedTimerAlarm(mymachine.ALARM0, 0.1*1000*1000, alarm0)
             mymachine.SetOneshotTimerAlarm(mymachine.ALARM1, 5*1000*1000, alarm1)
             mymachine.SetRepeatedTimerAlarm(mymachine.ALARM2, 3*1000*1000, alarm2)
             mymachine.SetRepeatedTimerAlarm(mymachine.ALARM3, 1*1000*1000, alarm3)
-            fmt.Printf("setting changed\r\n");
+            fmt.Printf("setting changed 1\r\n");
+        } else if (loop == 20) {
+            mymachine.SetRepeatedTimerAlarm(mymachine.ALARM1, 0, alarm1)
+            fmt.Printf("setting changed 2\r\n");
+        } else if (loop == 30) {
+            // to check if ALARM3 fires in spite of too busy ALARM1
+            mymachine.SetOneshotTimerAlarm(mymachine.ALARM3, 3*1000*1000, exit)
+            fmt.Printf("setting changed 3\r\n");
         }
     }
 }
@@ -65,4 +73,9 @@ func alarm2() {
 
 func alarm3() {
     fmt.Printf("alarm3\r\n");
+}
+
+func exit() {
+    fmt.Printf("exit\r\n");
+    os.Exit(0)
 }
