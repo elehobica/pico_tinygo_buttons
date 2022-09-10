@@ -11,27 +11,6 @@ import (
     "fmt"
 )
 
-type AlarmId int
-const (
-    ALARM0 AlarmId = iota
-    ALARM1
-    ALARM2
-    ALARM3
-    __NUM_ALARMS__
-)
-
-const minInterval uint32 = 100 // us
-
-type Alarm struct {
-    repeat    bool
-    interval  uint32
-    target    uint64
-    isPending bool
-    callback  func()
-}
-
-var almAry [__NUM_ALARMS__]*Alarm
-
 type timerType struct {
     timeHW   volatile.Register32
     timeLW   volatile.Register32
@@ -50,7 +29,26 @@ type timerType struct {
 }
 
 var timer = (*timerType)(unsafe.Pointer(rp.TIMER))
+
+type AlarmId int
+const (
+    ALARM0 AlarmId = iota
+    ALARM1
+    ALARM2
+    ALARM3
+    __NUM_ALARMS__
+)
+
+type Alarm struct {
+    repeat    bool
+    interval  uint32
+    target    uint64
+    callback  func()
+}
+
+const minInterval uint32 = 2 // us
 var mu = (*sync.Mutex)(&sync.Mutex{})
+var almAry [__NUM_ALARMS__]*Alarm
 
 // TimeElapsed returns time elapsed since power up, in microseconds.
 func (tmr *timerType) timeElapsed() (us uint64) {
@@ -112,18 +110,18 @@ func setTimerAlarm(alarmId AlarmId, us uint32, repeat bool, f func()) error {
     almAry[alarmId].repeat = repeat
     almAry[alarmId].interval = us
     almAry[alarmId].target = timer.timeElapsed() + uint64(almAry[alarmId].interval)
-    almAry[alarmId].isPending = false
     almAry[alarmId].callback = f
 
     if almAry[alarmId].callback != nil {
-        setTimerIrq(alarmId, true)
         now := timer.timeElapsed()
         // Care the case if the time has already passed the target
         if almAry[alarmId].target <= now {
             almAry[alarmId].target = now + uint64(minInterval)
         }
         timer.alarm[alarmId].Set(uint32(almAry[alarmId].target))
+        setTimerIrq(alarmId, true)
     } else {
+        almAry[alarmId].repeat = false
         setTimerIrq(alarmId, false)
     }
 
@@ -140,32 +138,35 @@ func SetOneshotTimerAlarm(alarmId AlarmId, us uint32, f func()) error {
 
 func timerHandleInterrupt(intr interrupt.Interrupt) {
     ints := timer.intS.Get()
-    // process only one IRQ (priority: ALARM0 > ALARM1 > ALARM2 > ALARM3)
+    // IRQ post process and do callback
     for alarmId := ALARM0; alarmId < __NUM_ALARMS__; alarmId++ {
-        if (ints & (1 << alarmId)) != 0 {
-            timer.intR.Set(1 << alarmId) // Clear Interrupt
-            if almAry[alarmId] != nil {
-                almAry[alarmId].isPending = true
-                if almAry[alarmId].callback != nil {
-                    almAry[alarmId].callback()
-                }
-                if almAry[alarmId].repeat {
-                    mu.Lock()
-                    almAry[alarmId].target += uint64(almAry[alarmId].interval)
-                    now := timer.timeElapsed()
-                    // Care the case if the time has already passed the target while callback
-                    if almAry[alarmId].target <= now {
-                        almAry[alarmId].target = now + uint64(minInterval)
-                    }
-                    timer.alarm[alarmId].Set(uint32(almAry[alarmId].target))
-                    mu.Unlock()
-                } else {
-                    almAry[alarmId].callback = nil
-                    setTimerIrq(AlarmId(alarmId), false)
-                }
-                almAry[alarmId].isPending = false
+        // Check if the IRQ fired
+        if (ints & (1 << alarmId)) == 0 {
+            continue
+        }
+        // Clear Interrupt
+        timer.intR.Set(1 << alarmId)
+        if almAry[alarmId] == nil {
+            continue
+        }
+        if almAry[alarmId].callback == nil {
+            continue
+        }
+        // Do callback
+        almAry[alarmId].callback()
+        // Prepare for repeated alarm
+        if almAry[alarmId].repeat {
+            almAry[alarmId].target += uint64(almAry[alarmId].interval)
+            now := timer.timeElapsed()
+            // Care the case if the time has already passed the target while callback
+            if almAry[alarmId].target < now + uint64(minInterval) {
+                almAry[alarmId].target = now + uint64(minInterval)
             }
-            break // process only one IRQ
+            timer.alarm[alarmId].Set(uint32(almAry[alarmId].target))
+            // it fires even if other callback(s) takes time
+        } else {
+            almAry[alarmId].callback = nil
+            setTimerIrq(AlarmId(alarmId), false)
         }
     }
 }
