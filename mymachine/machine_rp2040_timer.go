@@ -39,11 +39,15 @@ const (
     __NUM_ALARMS__
 )
 
+type callbackType func(name string, alarmId AlarmId, opts ...interface{})
+
 type Alarm struct {
+    name      string
     repeat    bool
     interval  uint32
     target    uint64
-    callback  func()
+    callback  callbackType
+    opts      []interface{}
 }
 
 const minInterval uint32 = 2 // us
@@ -96,7 +100,7 @@ func setTimerIrq(alarmId AlarmId, flag bool) error{
     return nil
 }
 
-func setTimerAlarm(alarmId AlarmId, us uint32, repeat bool, f func()) error {
+func setTimerAlarm(name string, alarmId AlarmId, us uint32, repeat bool, callback callbackType, opts ...interface{}) error {
     if alarmId >= __NUM_ALARMS__ {
         return fmt.Errorf("AlarmId over")
     }
@@ -107,10 +111,12 @@ func setTimerAlarm(alarmId AlarmId, us uint32, repeat bool, f func()) error {
     if us < minInterval {
         us = minInterval
     }
+    almAry[alarmId].name = name
     almAry[alarmId].repeat = repeat
     almAry[alarmId].interval = us
     almAry[alarmId].target = timer.timeElapsed() + uint64(almAry[alarmId].interval)
-    almAry[alarmId].callback = f
+    almAry[alarmId].callback = callback
+    almAry[alarmId].opts = opts
 
     if almAry[alarmId].callback != nil {
         now := timer.timeElapsed()
@@ -128,12 +134,12 @@ func setTimerAlarm(alarmId AlarmId, us uint32, repeat bool, f func()) error {
     return nil
 }
 
-func SetRepeatedTimerAlarm(alarmId AlarmId, us uint32, f func()) error {
-    return setTimerAlarm(alarmId, us, true, f)
+func SetRepeatedTimerAlarm(name string, alarmId AlarmId, us uint32, callback callbackType, opts ...interface{}) error {
+    return setTimerAlarm(name, alarmId, us, true, callback, opts...)
 }
 
-func SetOneshotTimerAlarm(alarmId AlarmId, us uint32, f func()) error {
-    return setTimerAlarm(alarmId, us, false, f)
+func SetOneshotTimerAlarm(name string, alarmId AlarmId, us uint32, callback callbackType, opts ...interface{}) error {
+    return setTimerAlarm(name, alarmId, us, false, callback, opts...)
 }
 
 func timerHandleInterrupt(intr interrupt.Interrupt) {
@@ -153,7 +159,7 @@ func timerHandleInterrupt(intr interrupt.Interrupt) {
             continue
         }
         // Do callback
-        almAry[alarmId].callback()
+        almAry[alarmId].callback(almAry[alarmId].name, alarmId, almAry[alarmId].opts...)
         // Prepare for repeated alarm
         if almAry[alarmId].repeat {
             almAry[alarmId].target += uint64(almAry[alarmId].interval)
