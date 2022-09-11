@@ -63,6 +63,10 @@ func (tmr *timerType) timeElapsed() (us uint64) {
     return uint64(hi)<<32 | uint64(lo)
 }
 
+func TimeElapsed() (us uint64) {
+    return timer.timeElapsed()
+}
+
 func setTimerIrq(alarmId AlarmId, flag bool) error{
     if alarmId >= __NUM_ALARMS__ {
         return fmt.Errorf("AlarmId over: %d", alarmId)
