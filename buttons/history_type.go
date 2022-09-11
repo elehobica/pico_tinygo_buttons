@@ -35,15 +35,24 @@ func (history *historyType) unshift(flag bool) {
 }
 
 func (history *historyType) countRisingEdge(size uint8, single bool) (count uint8) {
-    for i := 0; i < int(size) - 1; i++ {
-        if history.getPos(i) && !history.getPos(i+1) {
-            count++
-            if single {
-                break
-            }
-        }
+    u64 := uint64(*history)
+    const evenMask = 0x5555555555555555
+    const oddMask  = 0xaaaaaaaaaaaaaaaa
+    // check rising at even colum
+    u64l := u64 ^ evenMask
+    u64l = (u64l >> 1) | u64l
+    u64l = u64l & evenMask
+    // check rising at odd colum
+    u64h := u64 ^ oddMask 
+    u64h = (u64h >> 1) | u64h
+    u64h = u64h & oddMask
+    // merge even and odd (ignore top)
+    u64 = ^(u64h | u64l | (uint64(1) << 63))
+    if single && u64 != uint64(0) {
+        return uint8(1)
     }
-    return count
+    // countOnes where indicates rising edge as '1'
+    return uint8(bits.OnesCount64(u64))
 }
 
 func (history *historyType) trailingZeros() uint8 {
