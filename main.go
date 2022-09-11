@@ -61,9 +61,9 @@ func main() {
             if event.Type == buttons.EVT_SINGLE {
                 fmt.Printf("%s: 1\r\n", event.ButtonName)
             } else if event.Type == buttons.EVT_SINGLE_REPEATED {
-                fmt.Printf("%s: 1 (Repeated)\r\n", event.ButtonName)
+                fmt.Printf("%s: 1 (Repeated %d)\r\n", event.ButtonName, event.RepeatCount)
             } else if event.Type == buttons.EVT_MULTI {
-                fmt.Printf("%s: %d\r\n", event.ButtonName, event.Count)
+                fmt.Printf("%s: %d\r\n", event.ButtonName, event.ClickCount)
             } else if event.Type == buttons.EVT_LONG {
                 fmt.Printf("%s: Long\r\n", event.ButtonName)
             } else if event.Type == buttons.EVT_LONG_LONG {
