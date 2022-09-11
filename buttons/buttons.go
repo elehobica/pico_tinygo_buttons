@@ -7,7 +7,7 @@ import (
 type ButtonConfig struct {
     activeHigh bool         // Set false if button is connected between GND and pin with pull-up
     multiClicks bool        // Detect multiple clicks if true, detect single click if false
-    historySize uint8       // Size of button status history
+    historySize uint8       // Size of button status history (max 64)
     filterSize uint8        // filter size to process raw status
     actFinishCnt uint8      // Button action detection starts when status keeps false at latest continuous actFinishCnt times (only if multiClicks)
     repeatDetectCnt uint8   // continuous counts to detect Repeat click when continuous push (only if !multiClicks. ignored if 0. if defined Long/LongLong detect disabled)
@@ -52,12 +52,14 @@ var DefaultButtonMultiConfig = &ButtonConfig {
     longLongDetectCnt: 39,
 }
 
+type historyType uint64
+
 type Button struct {
     name     string
     pin      *machine.Pin
     config   *ButtonConfig
-    history  []bool
-    filtered []bool
+    history  historyType
+    filtered historyType
 }
 
 type ButtonEventType int
@@ -87,6 +89,40 @@ type Buttons struct {
     event       chan ButtonEvent
 }
 
+//=============
+// historyType
+//=============
+func newHistory(flag bool) historyType {
+    if flag {
+        return historyType(^uint64(0))
+    }
+    return historyType(uint64(0))
+}
+
+func boolToUint64(flag bool) (ans uint64) {
+    if flag {
+        ans = uint64(1)
+    }
+    return ans
+}
+
+func (history *historyType) getPos(i int) bool {
+    mask := uint64(1) << i
+    return (uint64(*history) & mask) != uint64(0)
+}
+
+func (history *historyType) setPos(i int, flag bool) {
+    mask := uint64(1) << i
+    *history = historyType((uint64(*history) & ^mask) | (boolToUint64(flag) << i))
+}
+
+func (history *historyType) unshiftPos(flag bool) {
+    *history = historyType((uint64(*history) << 1) | boolToUint64(flag))
+}
+
+//==============
+// ButtonCOnfig
+//==============
 func NewButtonConfig(
         activeHigh, multiClicks bool,
         historySize, filterSize, actFinishCnt, repeatDetectCnt, repeatSkip, longDetectCnt, longLongDetectCnt uint8,
@@ -110,6 +146,8 @@ func (config *ButtonConfig) reflectConstraints() {
     // revise illegal settings
     if config.historySize < 10 {
         config.historySize = 10
+    } else if config.historySize > 64 {
+        config.historySize = 64
     }
     if config.filterSize < 1 {
         config.filterSize = 1
@@ -127,6 +165,9 @@ func (config *ButtonConfig) reflectConstraints() {
     }
 }
 
+//=========
+// Buttons
+//=========
 func New(name string, button ...*Button) *Buttons {
     return &Buttons {
         name: name,
@@ -154,27 +195,25 @@ func (buttons *Buttons) GetEvent() *ButtonEvent {
     return &event
 }
 
+//========
+// Button
+//========
 func NewButton(name string, pin *machine.Pin, config *ButtonConfig) *Button {
     button := Button {
         name: name,
         pin: pin,
         config: config,
-        history: make([]bool, config.historySize, config.historySize),
-        filtered: make([]bool, config.historySize, config.historySize),
+        history: newHistory(false),
+        filtered: newHistory(false),
     }
     button.pin.Configure(machine.PinConfig{Mode: machine.PinInput})
     return &button
 }
 
+//===============
+// Scan Periodic
+//===============
 func ScanPeriodic(buttons *Buttons) {
-    // === Local Functions ===
-    clearBoolSlice := func(slice []bool, value bool) {
-        for i := range slice  {
-            slice[i] = value
-        }
-    }
-
-    // === Function Start ===
     defer func() { buttons.scanCnt++ } ()
     if buttons.scanCnt < uint32(buttons.scanSkip) {
         return
@@ -183,20 +222,18 @@ func ScanPeriodic(buttons *Buttons) {
         pin := button.pin
         rawSts := pin.Get() == button.config.activeHigh
         // === unshift with keeping slice size ===
-        {
-            button.history = append([]bool{rawSts,}, button.history[:len(button.history)-1]...)
-            button.filtered = append([]bool{false,}, button.filtered[:len(button.filtered)-1]...)
-        }
+        button.history.unshiftPos(rawSts)
+        button.filtered.unshiftPos(false)
         // === Detect Repeated (by non-filtered) ===
-        repeatCnt := func(history []bool, config *ButtonConfig) (repeat uint8) {
+        repeatCnt := func(history *historyType, config *ButtonConfig) (repeat uint8) {
             repeat = 0
             if config.longDetectCnt == 0 && config.longLongDetectCnt == 0 {
                 var count uint8 = 0
-                for _, histSts := range history {
-                    if histSts {
+                for i := 0; i < int(config.historySize); i++ {
+                    if history.getPos(i) {
                         count++
                     } else {
-                        break
+                        break;
                     }
                 }
                 if buttons.scanCnt % uint32(config.repeatSkip + 1) == 0 {
@@ -206,18 +243,18 @@ func ScanPeriodic(buttons *Buttons) {
                 }
             }
             return repeat
-        } (button.history, button.config)
+        } (&button.history, button.config)
         // === Detect Long (by non-filtered) ===
-        detectLong, detectLongLong := func(history, filtered []bool, config *ButtonConfig) (flagLong, flagLongLong bool) {
+        detectLong, detectLongLong := func(history, filtered *historyType, config *ButtonConfig) (flagLong, flagLongLong bool) {
             flagLong = false
             flagLongLong = false
             if config.repeatDetectCnt == 0 {
                 var count uint8 = 0
-                for _, histSts := range history {
-                    if histSts {
+                for i := 0; i < int(config.historySize); i++ {
+                    if history.getPos(i) {
                         count++
                     } else {
-                        break
+                        break;
                     }
                 }
                 if count > 0 {
@@ -229,41 +266,42 @@ func ScanPeriodic(buttons *Buttons) {
                 }
                 if flagLong {
                     // Clear all once detected, initialize all as true to avoid repeated detection
-                    clearBoolSlice(filtered, true)
+                    *filtered = newHistory(true)
                 }
             }
             return flagLong, flagLongLong
-        } (button.history, button.filtered, button.config)
+        } (&button.history, &button.filtered, button.config)
         // === Filter ===
         {
             isFilteredTrue := true
             isFilteredFalse := true
-            for _, histSts := range button.history[:button.config.filterSize] {
+            for i := 0; i < int(button.config.filterSize); i++ {
+                histSts := button.history.getPos(i)
                 isFilteredTrue = isFilteredTrue && histSts
                 isFilteredFalse = isFilteredFalse && !histSts
             }
             if isFilteredTrue {
-                button.filtered[0] = true
+                button.filtered.setPos(0, true)
             } else if isFilteredFalse {
-                button.filtered[0] = false
+                button.filtered.setPos(0, false)
             } else {
-                button.filtered[0] = button.filtered[1]
+                button.filtered.setPos(0, button.filtered.getPos(1))
             }
         }
         // === Check Action finished (only if multiClicks) ===
-        actFinished := func(filtered []bool, config *ButtonConfig) (flag bool) {
+        actFinished := func(filtered *historyType, config *ButtonConfig) (flag bool) {
             flag = true
-            for _, filtSts := range filtered[:config.actFinishCnt] {
-                flag = flag && !filtSts
+            for i := 0; i < int(config.actFinishCnt); i++ {
+                flag = flag && !filtered.getPos(i)
             }
             return flag
-        } (button.filtered, button.config)
+        } (&button.filtered, button.config)
         // === Count rising edge ===
-        countRise := func(filtered []bool, config *ButtonConfig) (count uint8) {
+        countRise := func(filtered *historyType, config *ButtonConfig) (count uint8) {
             count = 0
             if actFinished {
                 for i := 0; i < int(config.historySize - 1); i++ {
-                    if filtered[i] && !filtered[i+1] {
+                    if filtered.getPos(i) && !filtered.getPos(i+1) {
                         count++
                         if !config.multiClicks {
                             break
@@ -272,11 +310,11 @@ func ScanPeriodic(buttons *Buttons) {
                 }
                 if count > 0 {
                     // Clear all once detected, initialize all as true to avoid repeated detection
-                    clearBoolSlice(filtered, true)
+                    *filtered = newHistory(true)
                 }
             }
             return count
-        } (button.filtered, button.config)
+        } (&button.filtered, button.config)
         // === Send event ===
         {
             eventType := EVT_NONE
