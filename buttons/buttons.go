@@ -5,51 +5,51 @@ import (
 )
 
 type ButtonConfig struct {
-    ActiveHigh bool         // Set false if button is connected between GND and pin with pull-up
-    MultiClicks bool        // Detect multiple clicks if true, detect single click if false
-    HistorySize uint8       // Size of button status history
-    FilterSize uint8        // filter size to process raw status
-    ActFinishCnt uint8      // Button action detection starts when status keeps false at latest continuous ActFinishCnt times (only if MultiClicks)
-    RepeatDetectCnt uint8   // continuous counts to detect Repeat click when continuous push (only if !MultiClicks. ignored if 0. if defined Long/LongLong detect disabled)
-    RepeatSkip uint8        // skip count for Repeat click detection (every scan if 0)
-    LongDetectCnt uint8     // continuous counts to detect Long Push (ignored if 0)
-    LongLongDetectCnt uint8 // continuous counts to detect LongLong Push (ignored if 0)
+    activeHigh bool         // Set false if button is connected between GND and pin with pull-up
+    multiClicks bool        // Detect multiple clicks if true, detect single click if false
+    historySize uint8       // Size of button status history
+    filterSize uint8        // filter size to process raw status
+    actFinishCnt uint8      // Button action detection starts when status keeps false at latest continuous actFinishCnt times (only if multiClicks)
+    repeatDetectCnt uint8   // continuous counts to detect Repeat click when continuous push (only if !multiClicks. ignored if 0. if defined Long/LongLong detect disabled)
+    repeatSkip uint8        // skip count for Repeat click detection (every scan if 0)
+    longDetectCnt uint8     // continuous counts to detect Long Push (ignored if 0)
+    longLongDetectCnt uint8 // continuous counts to detect LongLong Push (ignored if 0)
 }
 
 var DefaultButtonSingleConfig = &ButtonConfig {
-    ActiveHigh: false,
-    MultiClicks: false,
-    HistorySize: 40,
-    FilterSize: 1,
-    ActFinishCnt: 5,
-    RepeatDetectCnt: 0,
-    RepeatSkip: 0,
-    LongDetectCnt: 0,
-    LongLongDetectCnt: 0,
+    activeHigh: false,
+    multiClicks: false,
+    historySize: 40,
+    filterSize: 1,
+    actFinishCnt: 0,
+    repeatDetectCnt: 0,
+    repeatSkip: 0,
+    longDetectCnt: 0,
+    longLongDetectCnt: 0,
 }
 
 var DefaultButtonSingleRepeatConfig = &ButtonConfig {
-    ActiveHigh: false,
-    MultiClicks: false,
-    HistorySize: 40,
-    FilterSize: 1,
-    ActFinishCnt: 5,
-    RepeatDetectCnt: 10,
-    RepeatSkip: 2,
-    LongDetectCnt: 0,
-    LongLongDetectCnt: 0,
+    activeHigh: false,
+    multiClicks: false,
+    historySize: 40,
+    filterSize: 1,
+    actFinishCnt: 0,
+    repeatDetectCnt: 10,
+    repeatSkip: 2,
+    longDetectCnt: 0,
+    longLongDetectCnt: 0,
 }
 
 var DefaultButtonMultiConfig = &ButtonConfig {
-    ActiveHigh: false,
-    MultiClicks: true,
-    HistorySize: 40,
-    FilterSize: 1,
-    ActFinishCnt: 5,
-    RepeatDetectCnt: 0,
-    RepeatSkip: 2,
-    LongDetectCnt: 15,
-    LongLongDetectCnt: 39,
+    activeHigh: false,
+    multiClicks: true,
+    historySize: 40,
+    filterSize: 1,
+    actFinishCnt: 5,
+    repeatDetectCnt: 0,
+    repeatSkip: 2,
+    longDetectCnt: 15,
+    longLongDetectCnt: 39,
 }
 
 type Button struct {
@@ -71,53 +71,75 @@ const (
 )
 
 type ButtonEvent struct {
-    Button *Button
-    Type   ButtonEventType
-    Count  uint8
+    ButtonName string
+    Type       ButtonEventType
+    Count      uint8
 }
 
-const ButtunEventSize int = 16
+const ButtonEventChanSize int = 16
 
 type Buttons struct {
-    Name        string
-    ButtonSlice []*Button
-    ScanSkip    uint8
+    name        string
+    buttonSlice []*Button
+    scanSkip    uint8
     scanCnt     uint32
     event       chan ButtonEvent
 }
 
-func (config *ButtonConfig) Configure() {
+func NewButtonConfig(
+        activeHigh, multiClicks bool,
+        historySize, filterSize, actFinishCnt, repeatDetectCnt, repeatSkip, longDetectCnt, longLongDetectCnt uint8,
+    ) *ButtonConfig {
+    config := &ButtonConfig {
+        activeHigh: activeHigh,
+        multiClicks: multiClicks,
+        historySize: historySize,
+        filterSize: filterSize,
+        actFinishCnt: actFinishCnt,
+        repeatDetectCnt: repeatDetectCnt,
+        repeatSkip: repeatSkip,
+        longDetectCnt: longDetectCnt,
+        longLongDetectCnt: longLongDetectCnt,
+    }
+    config.reflectConstraints()
+    return config
+}
+
+func (config *ButtonConfig) reflectConstraints() {
     // revise illegal settings
-    if config.HistorySize < 10 {
-        config.HistorySize = 10
+    if config.historySize < 10 {
+        config.historySize = 10
     }
-    if config.FilterSize < 1 {
-        config.FilterSize = 1
+    if config.filterSize < 1 {
+        config.filterSize = 1
     }
-    if !config.MultiClicks {
-        config.ActFinishCnt = 0
-    } else if config.ActFinishCnt > config.HistorySize {
-        config.ActFinishCnt = config.HistorySize
+    if !config.multiClicks {
+        config.actFinishCnt = 0
+    } else if config.actFinishCnt > config.historySize {
+        config.actFinishCnt = config.historySize
     }
-    if config.LongDetectCnt > config.HistorySize - 1{
-        config.LongDetectCnt = config.HistorySize - 1
+    if config.longDetectCnt > config.historySize - 1{
+        config.longDetectCnt = config.historySize - 1
     }
-    if config.LongLongDetectCnt > config.HistorySize - 1{
-        config.LongLongDetectCnt = config.HistorySize - 1
+    if config.longLongDetectCnt > config.historySize - 1{
+        config.longLongDetectCnt = config.historySize - 1
     }
 }
 
-func New(name string) *Buttons {
+func New(name string, button ...*Button) *Buttons {
     return &Buttons {
-        Name: name,
-        event: make(chan ButtonEvent, ButtunEventSize),
+        name: name,
+        buttonSlice: append([]*Button{}, button...),
+        event: make(chan ButtonEvent, ButtonEventChanSize),
     }
 }
 
-func (buttons *Buttons) AddButton(button ...*Button) {
-    for _, v := range button {
-        buttons.ButtonSlice = append(buttons.ButtonSlice, v)
-    }
+func (buttons *Buttons) SetScanSkip(scanSkip uint8) {
+    buttons.scanSkip = scanSkip
+}
+
+func (buttons *Buttons) GetName() string {
+    return buttons.name
 }
 
 func (buttons *Buttons) GetEvent() *ButtonEvent {
@@ -131,20 +153,15 @@ func (buttons *Buttons) GetEvent() *ButtonEvent {
     return &event
 }
 
-func (button *Button) GetName() string {
-    return button.name
-}
-
 func NewButton(name string, pin *machine.Pin, config *ButtonConfig) *Button {
     button := Button {
         name: name,
         pin: pin,
         config: config,
-        history: make([]bool, config.HistorySize, config.HistorySize),
-        filtered: make([]bool, config.HistorySize, config.HistorySize),
+        history: make([]bool, config.historySize, config.historySize),
+        filtered: make([]bool, config.historySize, config.historySize),
     }
     button.pin.Configure(machine.PinConfig{Mode: machine.PinInput})
-    button.config.Configure()
     return &button
 }
 
@@ -156,12 +173,12 @@ func ScanPeriodic(buttons *Buttons) {
     }
 
     defer func() { buttons.scanCnt++ } ()
-    if buttons.scanCnt < uint32(buttons.ScanSkip) {
+    if buttons.scanCnt < uint32(buttons.scanSkip) {
         return
     }
-    for _, button := range buttons.ButtonSlice {
+    for _, button := range buttons.buttonSlice {
         pin := button.pin
-        rawSts := pin.Get() == button.config.ActiveHigh
+        rawSts := pin.Get() == button.config.activeHigh
         // === unshift with keeping slice size ===
         {
             button.history = append([]bool{rawSts,}, button.history[:len(button.history)-1]...)
@@ -170,7 +187,7 @@ func ScanPeriodic(buttons *Buttons) {
         // === Detect Repeated (by non-filtered) ===
         detectRepeat := func() bool {
             detectRepeat := false
-            if button.config.LongDetectCnt == 0 && button.config.LongLongDetectCnt == 0 {
+            if button.config.longDetectCnt == 0 && button.config.longLongDetectCnt == 0 {
                 var count uint8 = 0
                 for _, histSts := range button.history {
                     if histSts {
@@ -179,8 +196,8 @@ func ScanPeriodic(buttons *Buttons) {
                         break
                     }
                 }
-                if button.config.RepeatDetectCnt > 0 && count >= button.config.RepeatDetectCnt {
-                    if buttons.scanCnt % uint32(button.config.RepeatSkip + 1) == 0 {
+                if button.config.repeatDetectCnt > 0 && count >= button.config.repeatDetectCnt {
+                    if buttons.scanCnt % uint32(button.config.repeatSkip + 1) == 0 {
                         detectRepeat = true
                     }
                 }
@@ -191,7 +208,7 @@ func ScanPeriodic(buttons *Buttons) {
         detectLong, detectLongLong := func() (bool, bool) {
             detectLong := false
             detectLongLong := false
-            if button.config.RepeatDetectCnt == 0 {
+            if button.config.repeatDetectCnt == 0 {
                 var count uint8 = 0
                 for _, histSts := range button.history {
                     if histSts {
@@ -201,9 +218,9 @@ func ScanPeriodic(buttons *Buttons) {
                     }
                 }
                 if count > 0 {
-                    if count == button.config.LongDetectCnt {
+                    if count == button.config.longDetectCnt {
                         detectLong = true
-                    } else if count == button.config.LongLongDetectCnt {
+                    } else if count == button.config.longLongDetectCnt {
                         detectLongLong = true
                     }
                 }
@@ -218,7 +235,7 @@ func ScanPeriodic(buttons *Buttons) {
         {
             isFilteredTrue := true
             isFilteredFalse := true
-            for _, histSts := range button.history[:button.config.FilterSize] {
+            for _, histSts := range button.history[:button.config.filterSize] {
                 isFilteredTrue = isFilteredTrue && histSts
                 isFilteredFalse = isFilteredFalse && !histSts
             }
@@ -230,10 +247,10 @@ func ScanPeriodic(buttons *Buttons) {
                 button.filtered[0] = button.filtered[1]
             }
         }
-        // === Check Action finished (only if MultiClicks) ===
+        // === Check Action finished (only if multiClicks) ===
         actFinished := func() bool {
             actFinished := true
-            for _, filtSts := range button.filtered[:button.config.ActFinishCnt] {
+            for _, filtSts := range button.filtered[:button.config.actFinishCnt] {
                 actFinished = actFinished && !filtSts
             }
             return actFinished
@@ -242,10 +259,10 @@ func ScanPeriodic(buttons *Buttons) {
         countRise := func() int {
             countRise := 0
             if actFinished {
-                for i := 0; i < int(button.config.HistorySize - 1); i++ {
+                for i := 0; i < int(button.config.historySize - 1); i++ {
                     if button.filtered[i] && !button.filtered[i+1] {
                         countRise++
-                        if !button.config.MultiClicks {
+                        if !button.config.multiClicks {
                             break
                         }
                     }
@@ -272,7 +289,7 @@ func ScanPeriodic(buttons *Buttons) {
                 eventType = EVT_LONG_LONG
             }
             event := ButtonEvent {
-                Button: button,
+                ButtonName: button.name,
                 Type: eventType,
                 Count: uint8(countRise),
             }

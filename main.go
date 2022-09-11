@@ -42,8 +42,7 @@ func main() {
     led.Configure(machine.PinConfig{Mode: machine.PinOutput})
     led.Low()
 
-    btns := buttons.New("5WayTactile+2")
-    btns.AddButton(
+    btns := buttons.New("5WayTactile+2",
         []*buttons.Button {
             buttons.NewButton("reset",  &resetBtnPin,  buttons.DefaultButtonSingleConfig),
             buttons.NewButton("set",    &setBtnPin,    buttons.DefaultButtonSingleConfig),
@@ -55,20 +54,20 @@ func main() {
         }...
     );
 
-    mymachine.SetRepeatedTimerAlarm("alarm0", mymachine.ALARM0, 0.05*1000*1000, buttonScan, btns)
+    mymachine.SetRepeatedTimerAlarm("alarm0", mymachine.ALARM0, 50*1000, buttonScan, btns)
 
     for loop := 0; true; loop++ {
         if event := btns.GetEvent(); event != nil {
             if event.Type == buttons.EVT_SINGLE {
-                fmt.Printf("%s: 1\r\n", event.Button.GetName())
+                fmt.Printf("%s: 1\r\n", event.ButtonName)
             } else if event.Type == buttons.EVT_SINGLE_REPEATED {
-                fmt.Printf("%s: 1 (Repeated)\r\n", event.Button.GetName())
+                fmt.Printf("%s: 1 (Repeated)\r\n", event.ButtonName)
             } else if event.Type == buttons.EVT_MULTI {
-                fmt.Printf("%s: %d\r\n", event.Button.GetName(), event.Count)
+                fmt.Printf("%s: %d\r\n", event.ButtonName, event.Count)
             } else if event.Type == buttons.EVT_LONG {
-                fmt.Printf("%s: Long\r\n", event.Button.GetName())
+                fmt.Printf("%s: Long\r\n", event.ButtonName)
             } else if event.Type == buttons.EVT_LONG_LONG {
-                fmt.Printf("%s: LongLong\r\n", event.Button.GetName())
+                fmt.Printf("%s: LongLong\r\n", event.ButtonName)
             }
         }
         led.Toggle()
