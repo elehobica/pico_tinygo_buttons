@@ -88,7 +88,7 @@ func setTimerIrq(alarmId AlarmId, flag bool) error{
         }
         irqSet(uint32(rp.IRQ_TIMER_IRQ_0 + int(alarmId)), true)
     } else {
-        timer.intE.Set(inte & ((1 << alarmId) ^ 0xffffffff))
+        timer.intE.Set(inte & ^(1 << alarmId))
         switch (alarmId) { // interrupt.New() only permits const value as IRQ
         case ALARM0:
             interrupt.New(rp.IRQ_TIMER_IRQ_0, timerHandleInterrupt).Disable()
