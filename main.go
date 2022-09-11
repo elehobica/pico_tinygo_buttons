@@ -57,7 +57,7 @@ func main() {
     mymachine.SetRepeatedTimerAlarm("alarm0", mymachine.ALARM0, 50*1000, buttonScan, btns)
 
     for loop := 0; true; loop++ {
-        if event := btns.GetEvent(); event != nil {
+        for event := btns.GetEvent(); event != nil; event = btns.GetEvent() {
             if event.Type == buttons.EVT_SINGLE {
                 fmt.Printf("%s: 1\r\n", event.ButtonName)
             } else if event.Type == buttons.EVT_SINGLE_REPEATED {
