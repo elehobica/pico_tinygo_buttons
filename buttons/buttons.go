@@ -76,7 +76,7 @@ type ButtonEvent struct {
     Count      uint8
 }
 
-const ButtonEventChanSize int = 16
+const ButtonEventChanSize = 16
 
 type Buttons struct {
     name        string
@@ -166,12 +166,14 @@ func NewButton(name string, pin *machine.Pin, config *ButtonConfig) *Button {
 }
 
 func ScanPeriodic(buttons *Buttons) {
+    // === Local Functions ===
     clearBoolSlice := func(slice []bool, value bool) {
         for i := range slice  {
             slice[i] = value
         }
     }
 
+    // === Function Start ===
     defer func() { buttons.scanCnt++ } ()
     if buttons.scanCnt < uint32(buttons.scanSkip) {
         return
@@ -185,32 +187,32 @@ func ScanPeriodic(buttons *Buttons) {
             button.filtered = append([]bool{false,}, button.filtered[:len(button.filtered)-1]...)
         }
         // === Detect Repeated (by non-filtered) ===
-        detectRepeat := func() bool {
-            detectRepeat := false
-            if button.config.longDetectCnt == 0 && button.config.longLongDetectCnt == 0 {
+        detectRepeat := func(history []bool, config *ButtonConfig) bool {
+            flag := false
+            if config.longDetectCnt == 0 && config.longLongDetectCnt == 0 {
                 var count uint8 = 0
-                for _, histSts := range button.history {
+                for _, histSts := range history {
                     if histSts {
                         count++
                     } else {
                         break
                     }
                 }
-                if button.config.repeatDetectCnt > 0 && count >= button.config.repeatDetectCnt {
-                    if buttons.scanCnt % uint32(button.config.repeatSkip + 1) == 0 {
-                        detectRepeat = true
+                if config.repeatDetectCnt > 0 && count >= config.repeatDetectCnt {
+                    if buttons.scanCnt % uint32(config.repeatSkip + 1) == 0 {
+                        flag = true
                     }
                 }
             }
-            return detectRepeat
-        } ()
+            return flag
+        } (button.history, button.config)
         // === Detect Long (by non-filtered) ===
-        detectLong, detectLongLong := func() (bool, bool) {
-            detectLong := false
-            detectLongLong := false
-            if button.config.repeatDetectCnt == 0 {
+        detectLong, detectLongLong := func(history, filtered []bool, config *ButtonConfig) (bool, bool) {
+            flagLong := false
+            flagLongLong := false
+            if config.repeatDetectCnt == 0 {
                 var count uint8 = 0
-                for _, histSts := range button.history {
+                for _, histSts := range history {
                     if histSts {
                         count++
                     } else {
@@ -218,19 +220,19 @@ func ScanPeriodic(buttons *Buttons) {
                     }
                 }
                 if count > 0 {
-                    if count == button.config.longDetectCnt {
-                        detectLong = true
-                    } else if count == button.config.longLongDetectCnt {
-                        detectLongLong = true
+                    if count == config.longDetectCnt {
+                        flagLong = true
+                    } else if count == config.longLongDetectCnt {
+                        flagLongLong = true
                     }
                 }
-                if detectLong {
+                if flagLong {
                     // Clear all once detected, initialize all as true to avoid repeated detection
-                    clearBoolSlice(button.filtered, true)
+                    clearBoolSlice(filtered, true)
                 }
             }
-            return detectLong, detectLongLong
-        } ()
+            return flagLong, flagLongLong
+        } (button.history, button.filtered, button.config)
         // === Filter ===
         {
             isFilteredTrue := true
@@ -248,32 +250,32 @@ func ScanPeriodic(buttons *Buttons) {
             }
         }
         // === Check Action finished (only if multiClicks) ===
-        actFinished := func() bool {
-            actFinished := true
-            for _, filtSts := range button.filtered[:button.config.actFinishCnt] {
-                actFinished = actFinished && !filtSts
+        actFinished := func(filtered []bool, config *ButtonConfig) bool {
+            flag := true
+            for _, filtSts := range filtered[:config.actFinishCnt] {
+                flag = flag && !filtSts
             }
-            return actFinished
-        } ()
+            return flag
+        } (button.filtered, button.config)
         // === Count rising edge ===
-        countRise := func() int {
-            countRise := 0
+        countRise := func(filtered []bool, config *ButtonConfig) uint8 {
+            var count uint8 = 0
             if actFinished {
-                for i := 0; i < int(button.config.historySize - 1); i++ {
-                    if button.filtered[i] && !button.filtered[i+1] {
-                        countRise++
-                        if !button.config.multiClicks {
+                for i := 0; i < int(config.historySize - 1); i++ {
+                    if filtered[i] && !filtered[i+1] {
+                        count++
+                        if !config.multiClicks {
                             break
                         }
                     }
                 }
-                if countRise > 0 {
+                if count > 0 {
                     // Clear all once detected, initialize all as true to avoid repeated detection
-                    clearBoolSlice(button.filtered, true)
+                    clearBoolSlice(filtered, true)
                 }
             }
-            return countRise
-        } ()
+            return count
+        } (button.filtered, button.config)
         // === Send event ===
         {
             eventType := EVT_NONE
@@ -291,7 +293,7 @@ func ScanPeriodic(buttons *Buttons) {
             event := ButtonEvent {
                 ButtonName: button.name,
                 Type: eventType,
-                Count: uint8(countRise),
+                Count: countRise,
             }
             if eventType != EVT_NONE && len(buttons.event) < cap(buttons.event) {
                 buttons.event <- event
