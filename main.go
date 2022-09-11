@@ -4,14 +4,21 @@ import (
     "fmt"
     "machine"
     "time"
-    "os"
 
-    "github.com/elehobica/pico_tinygo_timer_alarm/mymachine"
+    "github.com/elehobica/pico_tinygo_buttons/mymachine"
+    "github.com/elehobica/pico_tinygo_buttons/buttons"
 )
 
 var (
-    ledPin   machine.Pin
-    serial  = machine.Serial
+    serial     = machine.Serial
+    ledPin       machine.Pin
+    resetBtnPin  machine.Pin
+    setBtnPin    machine.Pin
+    centerBtnPin machine.Pin
+    rightBtnPin  machine.Pin
+    leftBtnPin   machine.Pin
+    downBtnPin   machine.Pin
+    upBtnPin     machine.Pin
 )
 
 type Pin struct {
@@ -28,65 +35,51 @@ var count [4]int
 
 func main() {
     println(); println()
-    println("=============================")
-    println("== pico_tinygo_timer_alarm ==")
-    println("=============================")
+    println("=========================")
+    println("== pico_tinygo_buttons ==")
+    println("=========================")
 
     led.Configure(machine.PinConfig{Mode: machine.PinOutput})
     led.Low()
 
-    mymachine.SetRepeatedTimerAlarm("alarm0", mymachine.ALARM0, 4*1000*1000, alarm, 0, true)
-    mymachine.SetRepeatedTimerAlarm("alarm1", mymachine.ALARM1, 1*1000*1000, alarm, 1, true)
-    mymachine.SetRepeatedTimerAlarm("alarm2", mymachine.ALARM2, 0.05*1000*1000, ledToggle, 2)
-    mymachine.SetOneshotTimerAlarm("alarm3", mymachine.ALARM3, 2*1000*1000, alarm, 3, true)
+    btns := buttons.New("5WayTactile+2")
+    btns.AddButton(
+        []*buttons.Button {
+            buttons.NewButton("reset",  &resetBtnPin,  buttons.DefaultButtonSingleConfig),
+            buttons.NewButton("set",    &setBtnPin,    buttons.DefaultButtonSingleConfig),
+            buttons.NewButton("center", &centerBtnPin, buttons.DefaultButtonMultiConfig),
+            buttons.NewButton("left",   &leftBtnPin,   buttons.DefaultButtonSingleRepeatConfig),
+            buttons.NewButton("right",  &rightBtnPin,  buttons.DefaultButtonSingleRepeatConfig),
+            buttons.NewButton("up",     &upBtnPin,     buttons.DefaultButtonSingleRepeatConfig),
+            buttons.NewButton("down",   &downBtnPin,   buttons.DefaultButtonSingleRepeatConfig),
+        }...
+    );
+
+    mymachine.SetRepeatedTimerAlarm("alarm0", mymachine.ALARM0, 0.05*1000*1000, buttonScan, btns)
 
     for loop := 0; true; loop++ {
-        time.Sleep(1000 * time.Millisecond)
-
-        fmt.Printf("loop: %d", loop)
-        for i := 0; i < 4; i++ {
-            fmt.Printf(", count[%d]: %d", i, count[i]);
+        if event := btns.GetEvent(); event != nil {
+            if event.Type == buttons.EVT_SINGLE {
+                fmt.Printf("%s: 1\r\n", event.Button.GetName())
+            } else if event.Type == buttons.EVT_SINGLE_REPEATED {
+                fmt.Printf("%s: 1 (Repeated)\r\n", event.Button.GetName())
+            } else if event.Type == buttons.EVT_MULTI {
+                fmt.Printf("%s: %d\r\n", event.Button.GetName(), event.Count)
+            } else if event.Type == buttons.EVT_LONG {
+                fmt.Printf("%s: Long\r\n", event.Button.GetName())
+            } else if event.Type == buttons.EVT_LONG_LONG {
+                fmt.Printf("%s: LongLong\r\n", event.Button.GetName())
+            }
         }
-        fmt.Printf("\r\n")
-
-        if (loop == 10) {
-            mymachine.SetRepeatedTimerAlarm("alarm0", mymachine.ALARM0, 1*1000*1000, alarm, 4, true)
-            mymachine.SetOneshotTimerAlarm("alarm1", mymachine.ALARM1, 5*1000*1000, alarm, 5, true)
-            mymachine.SetRepeatedTimerAlarm("alarm2", mymachine.ALARM2, 0.1*1000*1000, ledToggle, 6)
-            mymachine.SetRepeatedTimerAlarm("alarm3", mymachine.ALARM3, 3*1000*1000, alarm, 7, true)
-            fmt.Printf("setting changed 1\r\n");
-        } else if (loop == 20) {
-            mymachine.SetRepeatedTimerAlarm("alarm1", mymachine.ALARM1, 0, alarm, 8)
-            fmt.Printf("setting changed 2\r\n");
-        } else if (loop == 30) {
-            // to check if ALARM3, which has lowest priority, fires in spite of too busy ALARM1
-            mymachine.SetOneshotTimerAlarm("exit", mymachine.ALARM3, 5*1000*1000, exit)
-            fmt.Printf("setting changed 3\r\n");
-        }
+        led.Toggle()
+        time.Sleep(100 * time.Millisecond)
     }
 }
 
-func ledToggle(name string, alarmId mymachine.AlarmId, opts ...interface{}) {
-    led.Toggle()
-    count[alarmId]++
-}
-
-func alarm(name string, alarmId mymachine.AlarmId, opts ...interface{}) {
-    task := 0
-    if len(opts) > 0 {
-        task = opts[0].(int)
-    }
-    verbose := false
-    if len(opts) > 1 {
-        verbose = opts[1].(bool)
-    }
-    if verbose {
-        fmt.Printf("%s (task%d)\r\n", name, task);
-    }
-    count[alarmId]++
-}
-
-func exit(name string, alarmId mymachine.AlarmId, opts ...interface{}) {
-    fmt.Printf("%s\r\n", name);
-    os.Exit(0)
+func buttonScan(name string, alarmId mymachine.AlarmId, opts ...interface{}) {
+    btns := opts[0].(*buttons.Buttons)
+    //t0 := mymachine.TimeElapsed()
+    buttons.ScanPeriodic(btns)
+    //t1 := mymachine.TimeElapsed()
+    //fmt.Printf("time %d\r\n", t1 - t0)
 }

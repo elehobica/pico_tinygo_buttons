@@ -1,21 +1,37 @@
-# Raspberry Pi Pico TinyGo Timer Alarm
+# Raspberry Pi Pico TinyGo Buttons
 ## Overview
-This project is a simple implementation of Timer/Alarm on Raspberry Pi Pico by TinyGo.
+This project is a library for handling multiple buttons on Raspberry Pi Pico by TinyGo.
 * confirmed with TinyGo 0.22.0
 
-This project features:
-* Repeated Timer Alarm
-* Oneshot Timer Alarm
+This project features to detect:
+* Single Push event
+* Repeated Single Push event
+* Multiple Push event
+* Long (Long) Push event
 
-## Supported Board
+## Supported Board and Device
 * Raspberry Pi Pico
+* 5 Way Switch + 2 Buttons
+
+## Connections
+### 5 Way Switch + 2 Buttons
+| Pico Pin # | Pin Name | Function | Switch board |
+----|----|----|----
+| 24 | GP18 | GPIO Input | RESET |
+| 25 | GP19 | GPIO Input | SET |
+| 26 | GP20 | GPIO Input | CENTER |
+| 27 | GP21 | GPIO Input | RIGHT |
+| 29 | GP22 | GPIO Input | LEFT |
+| 31 | GP26 | GPIO Input | DOWN |
+| 32 | GP27 | GPIO Input | UP |
+| 36 | 3V3(OUT) | 3.3V | 3V3 |
 
 ## How to build
 * Build is confirmed only in TinyGo Docker environment with Windows WSL2 integration
 * Before starting docker, clone repository to your local enviroment (by GitBash etc.)
 ```
 > cd /d/somewhere/share
-> git clone -b main https://github.com/elehobica/pico_tinygo_timer_alarm.git
+> git clone -b main https://github.com/elehobica/pico_tinygo_buttons.git
 ```
 
 * Docker
@@ -29,25 +45,25 @@ $ docker run -it -v /mnt/d/somewhere/share:/share tinygo/tinygo:latest /bin/bash
 # cd /share
 
 (copy repository for docker native directory for best performance of WSL2, otherwise stay /share)
-(# cp -r /share/pico_tinygo_timer_alarm ~/ && cd ~ )
+(# cp -r /share/pico_tinygo_buttons ~/ && cd ~ )
 
-# cd pico_tinygo_timer_alarm
+# cd pico_tinygo_buttons
 ```
 
 * Go Module Configuration
 ```
-# go mod init github.com/elehobica/pico_tinygo_timer_alarm
+# go mod init github.com/elehobica/pico_tinygo_buttons
 # go mod tidy
 ```
 
 * TinyGo Build
 ```
-# tinygo build -target=pico -o pico_tinygo_timer_alarm.uf2
+# tinygo build -target=pico -o pico_tinygo_buttons.uf2
 
 (copy UF2 back to Windows local if working on docker native directory)
-(# cp pico_tinygo_timer_alarm.uf2 /share/pico_tinygo_timer_alarm/ )
+(# cp pico_tinygo_buttons.uf2 /share/pico_tinygo_buttons/ )
 ```
 
 * Put UF2 
 
-Then, go back to Windows environment and put "pico_tinygo_timer_alarm.uf2" on RPI-RP2 drive
+Then, go back to Windows environment and put "pico_tinygo_buttons.uf2" on RPI-RP2 drive
