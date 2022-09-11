@@ -226,7 +226,6 @@ func ScanPeriodic(buttons *Buttons) {
         button.filtered.unshiftPos(false)
         // === Detect Repeated (by non-filtered) ===
         repeatCnt := func(history *historyType, config *ButtonConfig) (repeat uint8) {
-            repeat = 0
             if config.longDetectCnt == 0 && config.longLongDetectCnt == 0 {
                 var count uint8 = 0
                 for i := 0; i < int(config.historySize); i++ {
@@ -246,8 +245,6 @@ func ScanPeriodic(buttons *Buttons) {
         } (&button.history, button.config)
         // === Detect Long (by non-filtered) ===
         detectLong, detectLongLong := func(history, filtered *historyType, config *ButtonConfig) (flagLong, flagLongLong bool) {
-            flagLong = false
-            flagLongLong = false
             if config.repeatDetectCnt == 0 {
                 var count uint8 = 0
                 for i := 0; i < int(config.historySize); i++ {
@@ -298,7 +295,6 @@ func ScanPeriodic(buttons *Buttons) {
         } (&button.filtered, button.config)
         // === Count rising edge ===
         countRise := func(filtered *historyType, config *ButtonConfig) (count uint8) {
-            count = 0
             if actFinished {
                 for i := 0; i < int(config.historySize - 1); i++ {
                     if filtered.getPos(i) && !filtered.getPos(i+1) {
