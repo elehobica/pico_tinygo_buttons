@@ -1,9 +1,10 @@
 package buttons
 
+const historySize = 64 // history size is fixed to 64 thanks to uint64 math/bits calculation
+
 type ButtonConfig struct {
     activeHigh bool         // Set false if button is connected between GND and pin with pull-up
     multiClicks bool        // Detect multiple clicks if true, detect single click if false
-    historySize uint8       // Size of button status history (max 64)
     filterSize uint8        // filter size to process raw status
     actFinishCnt uint8      // Button action detection starts when status keeps false at latest continuous actFinishCnt times (only if multiClicks)
     repeatDetectCnt uint8   // continuous counts to detect Repeat click when continuous push (only if !multiClicks. ignored if 0. if defined Long/LongLong detect disabled)
@@ -15,7 +16,6 @@ type ButtonConfig struct {
 var DefaultButtonSingleConfig = &ButtonConfig {
     activeHigh: false,
     multiClicks: false,
-    historySize: 40,
     filterSize: 1,
     actFinishCnt: 0,
     repeatDetectCnt: 0,
@@ -27,7 +27,6 @@ var DefaultButtonSingleConfig = &ButtonConfig {
 var DefaultButtonSingleRepeatConfig = &ButtonConfig {
     activeHigh: false,
     multiClicks: false,
-    historySize: 40,
     filterSize: 1,
     actFinishCnt: 0,
     repeatDetectCnt: 10,
@@ -39,7 +38,6 @@ var DefaultButtonSingleRepeatConfig = &ButtonConfig {
 var DefaultButtonMultiConfig = &ButtonConfig {
     activeHigh: false,
     multiClicks: true,
-    historySize: 40,
     filterSize: 1,
     actFinishCnt: 5,
     repeatDetectCnt: 0,
@@ -50,12 +48,11 @@ var DefaultButtonMultiConfig = &ButtonConfig {
 
 func NewButtonConfig(
         activeHigh, multiClicks bool,
-        historySize, filterSize, actFinishCnt, repeatDetectCnt, repeatSkip, longDetectCnt, longLongDetectCnt uint8,
+        filterSize, actFinishCnt, repeatDetectCnt, repeatSkip, longDetectCnt, longLongDetectCnt uint8,
     ) *ButtonConfig {
     config := &ButtonConfig {
         activeHigh: activeHigh,
         multiClicks: multiClicks,
-        historySize: historySize,
         filterSize: filterSize,
         actFinishCnt: actFinishCnt,
         repeatDetectCnt: repeatDetectCnt,
@@ -69,23 +66,18 @@ func NewButtonConfig(
 
 func (config *ButtonConfig) reflectConstraints() {
     // revise illegal settings
-    if config.historySize < 10 {
-        config.historySize = 10
-    } else if config.historySize > 64 {
-        config.historySize = 64
-    }
     if config.filterSize < 1 {
         config.filterSize = 1
     }
     if !config.multiClicks {
         config.actFinishCnt = 0
-    } else if config.actFinishCnt > config.historySize {
-        config.actFinishCnt = config.historySize
+    } else if config.actFinishCnt > historySize {
+        config.actFinishCnt = historySize
     }
-    if config.longDetectCnt > config.historySize - 1{
-        config.longDetectCnt = config.historySize - 1
+    if config.longDetectCnt > historySize - 1 {
+        config.longDetectCnt = historySize - 1
     }
-    if config.longLongDetectCnt > config.historySize - 1{
-        config.longLongDetectCnt = config.historySize - 1
+    if config.longLongDetectCnt > historySize - 1 {
+        config.longLongDetectCnt = historySize - 1
     }
 }

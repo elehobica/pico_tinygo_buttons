@@ -34,7 +34,7 @@ func (history *historyType) unshift(flag bool) {
     *history = historyType((uint64(*history) << 1) | boolToUint64(flag))
 }
 
-func (history *historyType) countRisingEdge(size uint8, single bool) (count uint8) {
+func (history *historyType) countRisingEdge(single bool) (count uint8) {
     u64 := uint64(*history)
     const evenMask = 0x5555555555555555
     const oddMask  = 0xaaaaaaaaaaaaaaaa
@@ -46,8 +46,9 @@ func (history *historyType) countRisingEdge(size uint8, single bool) (count uint
     u64h := u64 ^ oddMask 
     u64h = (u64h >> 1) | u64h
     u64h = u64h & oddMask
-    // merge even and odd (ignore top)
+    // merge even and odd (ignore MSB)
     u64 = ^(u64h | u64l | (uint64(1) << 63))
+    // short cut for single
     if single && u64 != uint64(0) {
         return uint8(1)
     }

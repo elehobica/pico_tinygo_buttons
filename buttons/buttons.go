@@ -84,7 +84,7 @@ func ScanPeriodic(buttons *Buttons) {
         actFinished := button.filtered.trailingZeros() >= cfg.actFinishCnt
         // === Then, Count rising edge ===
         if actFinished {
-            countRise = button.filtered.countRisingEdge(cfg.historySize, !cfg.multiClicks)
+            countRise = button.filtered.countRisingEdge(!cfg.multiClicks)
         }
         // Clear all once detected, initialize all as true to avoid repeated detection
         if detectLong || countRise > 0 {
