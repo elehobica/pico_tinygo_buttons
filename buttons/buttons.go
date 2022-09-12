@@ -88,7 +88,9 @@ func ScanPeriodic(buttons *Buttons) {
         // === Check Action finished (only if multiClicks) ===
         actFinished := button.filtered.trailingZeros() >= cfg.actFinishCnt
         // === Then, Count rising edge ===
-        if actFinished {
+        if repeatCnt > 0 { // if repeatCnt,countRise could be 0
+            countRise = 1
+        } else if actFinished {
             countRise = button.filtered.countRisingEdge(!cfg.multiClicks)
         }
         // Clear all once detected, initialize all as true to avoid repeated detection
@@ -97,9 +99,7 @@ func ScanPeriodic(buttons *Buttons) {
         }
         // === Send event ===
         eventType := EVT_NONE
-        if repeatCnt > 0 {
-            eventType = EVT_SINGLE_REPEATED
-        } else if countRise > 1 {
+        if countRise > 1 {
             eventType = EVT_MULTI
         } else if countRise > 0 {
             eventType = EVT_SINGLE
@@ -108,14 +108,13 @@ func ScanPeriodic(buttons *Buttons) {
         } else if detectLongLong {
             eventType = EVT_LONG_LONG
         }
-        event := ButtonEvent {
-            ButtonName: button.name,
-            Type: eventType,
-            ClickCount: countRise,
-            RepeatCount: repeatCnt,
-        }
         if eventType != EVT_NONE && len(buttons.event) < cap(buttons.event) {
-            buttons.event <- event
+            buttons.event <- ButtonEvent {
+                ButtonName: button.name,
+                Type: eventType,
+                ClickCount: countRise,
+                RepeatCount: repeatCnt,
+            }
         }
     }
 }

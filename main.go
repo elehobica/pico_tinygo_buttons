@@ -69,9 +69,11 @@ func main() {
         for event := btns.GetEvent(); event != nil; event = btns.GetEvent() {
             switch event.Type {
             case buttons.EVT_SINGLE:
-                fmt.Printf("%s: 1\r\n", event.ButtonName)
-            case buttons.EVT_SINGLE_REPEATED:
-                fmt.Printf("%s: 1 (Repeated %d)\r\n", event.ButtonName, event.RepeatCount)
+                if event.RepeatCount > 0 {
+                    fmt.Printf("%s: 1 (Repeated %d)\r\n", event.ButtonName, event.RepeatCount)
+                } else {
+                    fmt.Printf("%s: 1\r\n", event.ButtonName)
+                }
             case buttons.EVT_MULTI:
                 fmt.Printf("%s: %d\r\n", event.ButtonName, event.ClickCount)
                 if event.ButtonName == "center" && event.ClickCount == 3 {

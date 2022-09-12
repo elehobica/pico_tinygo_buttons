@@ -4,7 +4,6 @@ type ButtonEventType int
 const (
     EVT_NONE ButtonEventType = iota
     EVT_SINGLE
-    EVT_SINGLE_REPEATED
     EVT_MULTI
     EVT_LONG
     EVT_LONG_LONG
