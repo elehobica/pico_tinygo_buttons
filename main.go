@@ -43,6 +43,14 @@ func main() {
     led.Configure(machine.PinConfig{Mode: machine.PinOutput})
     led.Low()
 
+    resetBtnPin.Configure(machine.PinConfig{Mode: machine.PinInput})
+    setBtnPin.Configure(machine.PinConfig{Mode: machine.PinInput})
+    centerBtnPin.Configure(machine.PinConfig{Mode: machine.PinInput})
+    leftBtnPin.Configure(machine.PinConfig{Mode: machine.PinInput})
+    rightBtnPin.Configure(machine.PinConfig{Mode: machine.PinInput})
+    upBtnPin.Configure(machine.PinConfig{Mode: machine.PinInput})
+    downBtnPin.Configure(machine.PinConfig{Mode: machine.PinInput})
+
     btns := buttons.New("5WayTactile+2",
         []*buttons.Button {
             buttons.NewButton("reset",  &resetBtnPin,  buttons.DefaultButtonSingleConfig),

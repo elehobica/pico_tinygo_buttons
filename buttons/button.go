@@ -1,18 +1,18 @@
 package buttons
 
-import (
-    "machine"
-)
+type Pin interface {
+    Get() bool
+}
 
 type Button struct {
     name     string
-    pin      *machine.Pin
+    pin      Pin
     config   *ButtonConfig
     history  historyType
     filtered historyType
 }
 
-func NewButton(name string, pin *machine.Pin, config *ButtonConfig) *Button {
+func NewButton(name string, pin Pin, config *ButtonConfig) *Button {
     button := Button {
         name: name,
         pin: pin,
@@ -20,6 +20,5 @@ func NewButton(name string, pin *machine.Pin, config *ButtonConfig) *Button {
         history: newHistory(false),
         filtered: newHistory(false),
     }
-    button.pin.Configure(machine.PinConfig{Mode: machine.PinInput})
     return &button
 }
