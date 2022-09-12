@@ -48,8 +48,10 @@ func (history *historyType) countRisingEdge(single bool) (count uint8) {
     u64h = u64h & oddMask
     // merge even and odd (ignore MSB)
     u64 = ^(u64h | u64l | (uint64(1) << 63))
-    // short cut for single
-    if single && u64 != uint64(0) {
+    // shortcuts
+    if u64 == uint64(0) {
+        return uint8(0)
+    } else if single {
         return uint8(1)
     }
     // countOnes where indicates rising edge as '1'
@@ -63,7 +65,7 @@ func (history *historyType) trailingZeros() uint8 {
 
 func (history *historyType) trailingOnes() uint8 {
     u64 := uint64(*history)
-    // short cut for very usual history case
+    // shortcut for very usual history case
     if u64 == uint64(0) {
         return uint8(0)
     }
