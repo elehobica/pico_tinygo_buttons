@@ -97,6 +97,8 @@ down: 1 (Repeated 2)
 center: 2
 set: 1
 reset: 1
+center: Long
+center: LongLong
 center: 3
 time 41us (scan: 650)
 ```
