@@ -6,16 +6,16 @@ This project is a library for handling multiple buttons on Raspberry Pi Pico by 
 This project features to detect:
 * Single Push event
 * Repeated Single Push event
-* Multiple Push event
+* Multiple Push event (exclusive with Repeated Single)
 * Long (Long) Push event
 
 ## Supported Board and Device
 * Raspberry Pi Pico
 * 5 Way Switch + 2 Buttons
 
-## Connections
+## Pin Assignment & Connection
 ### 5 Way Switch + 2 Buttons
-| Pico Pin # | Pin Name | Function | Switch board |
+| Pico Pin # | Pin Name | Function | Connection |
 ----|----|----|----
 | 24 | GP18 | GPIO Input | RESET |
 | 25 | GP19 | GPIO Input | SET |
@@ -67,3 +67,36 @@ $ docker run -it -v /mnt/d/somewhere/share:/share tinygo/tinygo:latest /bin/bash
 * Put UF2 
 
 Then, go back to Windows environment and put "pico_tinygo_buttons.uf2" on RPI-RP2 drive
+
+## Usage Guide
+### Button Function Assignment
+* Multiple / Long / LongLong detection for Center button
+* Single / Repeated Single detection for Left/Right/Up/Down buttons
+* Single detection for Set/Reset buttons
+
+### Note
+* If Multiple detection enabled, time lag defined by 'actFinishCnt' is needed to determine action
+* Repeat count information of Repeated Single detection is served for UI items to accelerate something by continuous button push
+* Use NewButtonConfig() for customizing button detection parameters other than default configurations
+* Trriple clicks of Center button shows processing time of button scan function (in this example project)
+
+### Log Example
+```
+=========================
+== pico_tinygo_buttons ==
+=========================
+center: 1
+left: 1
+right: 1
+up: 1
+up: 1
+right: 1
+down: 1
+down: 1 (Repeated 1)
+down: 1 (Repeated 2)
+center: 2
+set: 1
+reset: 1
+center: 3
+time 41us (scan: 650)
+```
