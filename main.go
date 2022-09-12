@@ -31,7 +31,8 @@ func (pin Pin) Toggle() {
     pin.Set(!pin.Get())
 }
 
-var count [4]int
+var t uint64
+var scanCnt uint32
 
 func main() {
     println(); println()
@@ -58,15 +59,19 @@ func main() {
 
     for loop := 0; true; loop++ {
         for event := btns.GetEvent(); event != nil; event = btns.GetEvent() {
-            if event.Type == buttons.EVT_SINGLE {
+            switch event.Type {
+            case buttons.EVT_SINGLE:
                 fmt.Printf("%s: 1\r\n", event.ButtonName)
-            } else if event.Type == buttons.EVT_SINGLE_REPEATED {
+            case buttons.EVT_SINGLE_REPEATED:
                 fmt.Printf("%s: 1 (Repeated %d)\r\n", event.ButtonName, event.RepeatCount)
-            } else if event.Type == buttons.EVT_MULTI {
+            case buttons.EVT_MULTI:
                 fmt.Printf("%s: %d\r\n", event.ButtonName, event.ClickCount)
-            } else if event.Type == buttons.EVT_LONG {
+                if event.ButtonName == "center" && event.ClickCount == 3 {
+                    fmt.Printf("time %dus (scan: %d)\r\n", t, scanCnt)
+                }
+            case buttons.EVT_LONG:
                 fmt.Printf("%s: Long\r\n", event.ButtonName)
-            } else if event.Type == buttons.EVT_LONG_LONG {
+            case buttons.EVT_LONG_LONG:
                 fmt.Printf("%s: LongLong\r\n", event.ButtonName)
             }
         }
@@ -77,8 +82,8 @@ func main() {
 
 func buttonScan(name string, alarmId mymachine.AlarmId, opts ...interface{}) {
     btns := opts[0].(*buttons.Buttons)
-    //t0 := mymachine.TimeElapsed()
+    t0 := mymachine.TimeElapsed()
     buttons.ScanPeriodic(btns)
-    //t1 := mymachine.TimeElapsed()
-    //fmt.Printf("time %d\r\n", t1 - t0)
+    t = mymachine.TimeElapsed() - t0
+    scanCnt++
 }
