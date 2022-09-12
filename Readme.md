@@ -7,7 +7,7 @@ This project features to detect:
 * Single Push event
 * Repeated Single Push event
 * Multiple Push event (exclusive with Repeated Single)
-* Long (Long) Push event
+* Long (Long) Push event (exclusive with Repeated Single)
 
 ## Supported Board and Device
 * Raspberry Pi Pico

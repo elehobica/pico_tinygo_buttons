@@ -58,7 +58,12 @@ func ScanPeriodic(buttons *Buttons) {
         if cfg.longDetectCnt == 0 && cfg.longLongDetectCnt == 0 {
             if buttons.scanCnt % uint32(cfg.repeatSkip + 1) == 0 {
                 if cfg.repeatDetectCnt > 0 && trailingOnes >= cfg.repeatDetectCnt {
-                    repeatCnt = (trailingOnes - cfg.repeatDetectCnt + cfg.repeatSkip + 1) / (cfg.repeatSkip + 1)
+                    if button.rptCnt < 255 {
+                        button.rptCnt++
+                    }
+                    repeatCnt = button.rptCnt
+                } else {
+                    button.rptCnt = 0
                 }
             }
         }

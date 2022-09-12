@@ -10,6 +10,7 @@ type Button struct {
     config   *ButtonConfig
     history  historyType
     filtered historyType
+    rptCnt   uint8
 }
 
 func NewButton(name string, pin Pin, config *ButtonConfig) *Button {
