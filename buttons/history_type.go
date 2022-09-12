@@ -38,23 +38,23 @@ func (history *historyType) countRisingEdge(single bool) (count uint8) {
     u64 := uint64(*history)
     const evenMask = 0x5555555555555555
     const oddMask  = 0xaaaaaaaaaaaaaaaa
-    // check rising at even colum
-    u64l := u64 ^ evenMask
-    u64l = (u64l >> 1) | u64l
-    u64l = u64l & evenMask
-    // check rising at odd colum
-    u64h := u64 ^ oddMask 
-    u64h = (u64h >> 1) | u64h
-    u64h = u64h & oddMask
+    // check rising at even column
+    u64e := u64 ^ evenMask
+    u64e = (u64e >> 1) | u64e
+    u64e = u64e & evenMask
+    // check rising at odd column
+    u64o := u64 ^ oddMask
+    u64o = (u64o >> 1) | u64o
+    u64o = u64o & oddMask
     // merge even and odd (ignore MSB)
-    u64 = ^(u64h | u64l | (uint64(1) << 63))
+    u64 = ^(u64o | u64e | (uint64(1) << 63))
     // shortcuts
     if u64 == uint64(0) {
         return uint8(0)
     } else if single {
         return uint8(1)
     }
-    // countOnes where indicates rising edge as '1'
+    // now '1' indicates where rising edge is
     return uint8(bits.OnesCount64(u64))
 }
 
