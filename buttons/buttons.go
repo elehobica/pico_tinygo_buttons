@@ -52,12 +52,12 @@ func ScanPeriodic(buttons *Buttons) {
         rawSts := button.pin.Get() == cfg.activeHigh
         // === unshift history ===
         button.history.unshift(rawSts)
-        trailingOnes := button.history.trailingOnes()
-        trailingZeros :=button.history.trailingZeros()
+        recentStayPushedCounts := button.history.recentStayPushedCounts()
+        recentStayReleasedCounts :=button.history.recentStayReleasedCounts()
         // === Detect Repeated (by non-filtered) ===
         if cfg.longDetectCnt == 0 && cfg.longLongDetectCnt == 0 {
             if buttons.scanCnt % uint32(cfg.repeatSkip + 1) == 0 {
-                if cfg.repeatDetectCnt > 0 && trailingOnes >= cfg.repeatDetectCnt {
+                if cfg.repeatDetectCnt > 0 && recentStayPushedCounts >= cfg.repeatDetectCnt {
                     if button.rptCnt < 255 {
                         button.rptCnt++
                     }
@@ -69,24 +69,25 @@ func ScanPeriodic(buttons *Buttons) {
         }
         // === Detect Long (by non-filtered) ===
         if cfg.repeatDetectCnt == 0 {
-            if trailingOnes > 0 {
-                if trailingOnes == cfg.longDetectCnt {
+            if recentStayPushedCounts > 0 {
+                if recentStayPushedCounts == cfg.longDetectCnt {
                     detectLong = true
-                } else if trailingOnes == cfg.longLongDetectCnt {
+                } else if recentStayPushedCounts == cfg.longLongDetectCnt {
                     detectLongLong = true
                 }
             }
         }
         // === unshift Filter ===
-        if trailingOnes >= cfg.filterSize {
+        if recentStayPushedCounts >= cfg.filterSize {
             button.filtered.unshift(true)
-        } else if trailingZeros >= cfg.filterSize {
+        } else if recentStayReleasedCounts >= cfg.filterSize {
             button.filtered.unshift(false)
         } else {
             button.filtered.unshift(button.filtered.getPos(0))
         }
+        recentStayReleasedCountsFiltered := button.filtered.recentStayReleasedCounts()
         // === Check Action finished (only if multiClicks) ===
-        actFinished := button.filtered.trailingZeros() >= cfg.actFinishCnt
+        actFinished := recentStayReleasedCountsFiltered >= cfg.actFinishCnt
         // === Then, Count rising edge ===
         if repeatCnt > 0 { // if repeatCnt,countRise could be 0
             countRise = 1

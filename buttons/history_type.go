@@ -58,12 +58,12 @@ func (history *historyType) countRisingEdge(single bool) (count uint8) {
     return uint8(bits.OnesCount64(u64))
 }
 
-func (history *historyType) trailingZeros() uint8 {
+func (history *historyType) recentStayReleasedCounts() uint8 {
     u64 := uint64(*history)
     return uint8(bits.TrailingZeros64(u64))
 }
 
-func (history *historyType) trailingOnes() uint8 {
+func (history *historyType) recentStayPushedCounts() uint8 {
     u64 := uint64(*history)
     // shortcut for very usual history case
     if u64 == uint64(0) {
