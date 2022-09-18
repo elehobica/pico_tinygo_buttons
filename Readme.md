@@ -17,6 +17,7 @@ This project features to detect:
 ### 5 Way Switch + 2 Buttons
 | Pico Pin # | Pin Name | Function | Connection |
 ----|----|----|----
+| 23 | GND | GND | COM |
 | 24 | GP18 | GPIO Input | RESET |
 | 25 | GP19 | GPIO Input | SET |
 | 26 | GP20 | GPIO Input | CENTER |
@@ -24,7 +25,6 @@ This project features to detect:
 | 29 | GP22 | GPIO Input | LEFT |
 | 31 | GP26 | GPIO Input | DOWN |
 | 32 | GP27 | GPIO Input | UP |
-| 36 | 3V3(OUT) | 3.3V | 3V3 |
 
 ## How to build
 * Build is confirmed only in TinyGo Docker environment with Windows WSL2 integration
