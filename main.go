@@ -3,7 +3,7 @@ package main
 import (
     "fmt"
     "machine"
-    "time"
+    //"time"
 
     "github.com/elehobica/pico_tinygo_buttons/mymachine"
     "github.com/elehobica/pico_tinygo_buttons/buttons"
@@ -63,7 +63,11 @@ func main() {
         }...
     );
 
-    mymachine.SetRepeatedTimerAlarm("alarm0", mymachine.ALARM0, 50*1000, buttonScan, btns)
+    err := mymachine.SetRepeatedTimerAlarm("alarm1", mymachine.ALARM1, 50*1000, buttonScan, btns)
+    if err != nil {
+        println(err)
+        return
+    }
 
     for loop := 0; true; loop++ {
         for event := btns.GetEvent(); event != nil; event = btns.GetEvent() {
@@ -86,7 +90,7 @@ func main() {
             }
         }
         led.Toggle()
-        time.Sleep(100 * time.Millisecond)
+        //time.Sleep(100 * time.Millisecond)
     }
 }
 
