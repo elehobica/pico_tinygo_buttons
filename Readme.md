@@ -1,7 +1,7 @@
 # Raspberry Pi Pico TinyGo Buttons
 ## Overview
 This project is a library for handling multiple buttons on Raspberry Pi Pico by TinyGo.
-* confirmed with TinyGo 0.26.0
+* confirmed with TinyGo 0.27.0
 
 This project features to detect:
 * Single Push event
@@ -38,9 +38,9 @@ This project features to detect:
 ```
 > wsl
 (in WSL2 shell)
-$ docker pull tinygo/tinygo:0.26.0
+$ docker pull tinygo/tinygo:0.27.0
 $ docker images
-$ docker run -it -v /mnt/d/somewhere/share:/share tinygo/tinygo:0.26.0 /bin/bash
+$ docker run -it -v /mnt/d/somewhere/share:/share tinygo/tinygo:0.27.0 /bin/bash
 (in docker container)
 # cd /share
 
